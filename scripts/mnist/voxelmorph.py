@@ -26,7 +26,7 @@ class VoxelMNIST(nn.Module):
         return moving_transformed, flow_field
 
 
-def build_vxm(config):
+def build_vxm(config, device="cpu"):
     # une architecture
     nb_features = [
         [32, 32, 32, 32],  # encoder features
@@ -36,7 +36,7 @@ def build_vxm(config):
     model = VoxelMNIST(config.inshape, nb_features, config.ndim)
 
     # prepare the model for training and send to device
-    model.to(config.device)
+    model.to(device)
     model.train()
 
     # set optimizer
@@ -57,7 +57,7 @@ def build_vxm(config):
                          'losses': {'sim': L_sim, 'smooth': L_smooth}})
 
 
-def train_vxm(config, trainer, train_data, verbose=True):
+def train_vxm(config, trainer, train_data, verbose=True, device="cpu"):
     loss_hist = []
     # training loops
     zero_phi = np.zeros([config.batch_size_train, *config.inshape, config.ndim])
@@ -67,7 +67,7 @@ def train_vxm(config, trainer, train_data, verbose=True):
             # generate inputs (and true outputs) and convert them to tensors
             x_fix, x_mvt = next(train_data['fix']), next(train_data['moving'])
             size = min(x_fix.shape[0], x_mvt.shape[0])
-            x_fix, x_mvt = x_fix[:size], x_mvt[:size]  # because the remaining batch element can have diff size
+            x_fix, x_mvt = x_fix[:size].to(device), x_mvt[:size].to(device)  # because the remaining batch element can have diff size
             inputs = [x_mvt, x_fix]
 
             # run inputs through the model to produce a warped image and flow field
@@ -102,7 +102,7 @@ def load_vxm(path, device='cpu'):
     checkpoint = torch.load(path)
     conf = to_nametuple(checkpoint['config'])
 
-    trainer = build_vxm(conf)
+    trainer = build_vxm(conf, device)
     trainer.model.load_state_dict(checkpoint['model_state_dict'])
     trainer.optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
 
@@ -112,19 +112,24 @@ def load_vxm(path, device='cpu'):
     return conf, trainer
 
 
-def train(conf, save=True, save_name='default', save_folder='output', verbose=True):
+def train(conf, device="cpu", save=True, save_name='default', save_folder='output',  verbose=True):
+    print(f'train on {device}')
+    if device=="cuda":
+        os.environ['CUDA_VISIBLE_DEVICES'] = '0'
+        torch.backends.cudnn.deterministic = True
+        
     # load data
     mnist_data = MNISTData()
     x_train, x_val = mnist_data.train_val(conf.fix, conf.moving)
 
     # build model
-    trainer = build_vxm(conf)
+    trainer = build_vxm(conf, device)
 
     if verbose:
         print(summary(trainer.model, [(1, *conf.inshape), (1, *conf.inshape)]))
 
     # train model
-    train_vxm(conf, trainer, x_train, verbose)
+    train_vxm(conf, trainer, x_train, verbose, device)
 
     # save model
     if save:

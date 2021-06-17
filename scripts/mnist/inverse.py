@@ -34,7 +34,7 @@ class SpatialT(nn.Module):
         return moving_transformed
 
 
-def build_inverse(config):
+def build_inverse(config, device="cpu"):
     # une architecture
     nb_features = [
         [32, 32, 32, 32],  # encoder features
@@ -44,7 +44,8 @@ def build_inverse(config):
     model = UnetMNIST(config.inshape, nb_features, config.ndim)
     transform = SpatialT(config.inshape)
     # prepare the model for training and send to device
-    model.to(config.device)
+    model.to(device)
+    transform.to(device)
     model.train()
 
     # set optimizer
@@ -57,7 +58,7 @@ def build_inverse(config):
                                     'smooth': smoothloss}})
 
 
-def train_inverse(config, trainer, train_data, verbose=True):
+def train_inverse(config, trainer, train_data, verbose=True, device="cpu"):
     lossall = np.zeros((5, config.epochs))
 
     for epoch in tqdm(range(config.epochs)):
@@ -65,7 +66,7 @@ def train_inverse(config, trainer, train_data, verbose=True):
             # generate inputs (and true outputs) and convert them to tensors
             x_fix, x_mvt = next(train_data['fix']), next(train_data['moving'])
             size = min(x_fix.shape[0], x_mvt.shape[0])
-            X, Y = x_fix[:size], x_mvt[:size]  # because the remaining batch element can have diff size
+            X, Y = x_fix[:size].to(device), x_mvt[:size].to(device)  # because the remaining batch element can have diff size
 
             F_xy = trainer.model(*[X, Y])
             F_yx = trainer.model(*[Y, X])
@@ -115,19 +116,24 @@ def load_inverse(path, device='cpu'):
     return conf, trainer
 
 
-def train(conf, save=True, save_name='default', save_folder='output', verbose=True):
+def train(conf, device="cpu", save=True, save_name='default', save_folder='output', verbose=True):
+    print(f'train on {device}')
+    if device=="cuda":
+        os.environ['CUDA_VISIBLE_DEVICES'] = '0'
+        torch.backends.cudnn.deterministic = True
+        
     # load data
     mnist_data = MNISTData()
     x_train, x_val = mnist_data.train_val(conf.fix, conf.moving)
 
     # build model
-    trainer = build_inverse(conf)
+    trainer = build_inverse(conf, device)
 
     if verbose:
         print(summary(trainer.model, [(1, *conf.inshape), (1, *conf.inshape)]))
 
     # train model
-    train_inverse(conf, trainer, x_train, verbose)
+    train_inverse(conf, trainer, x_train, verbose, device)
 
     # save model
     if save:
