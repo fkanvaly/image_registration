@@ -28,7 +28,7 @@ def st_load_test_data(src, dst):
 
 
 @st.cache(allow_output_mutation=True)
-def st_load_model(name):
+def st_load_model(name, device='cpu'):
     path = os.path.join(f'output/model-inverse-{name}.pt')
     conf, trainer = load_inverse(path)
     trainer.model.eval()
@@ -97,7 +97,8 @@ def app():
     ##  Model for same source distribution 1️⃣ $\rightarrow$ 1️⃣
     ### 🧠 Load model
      """)
-
+    
+    device = st.selectbox('device:', ['cpu', 'cuda'])
     name = st.selectbox('config: λ = 0.5 -> lambda-0_5', list(inverse.keys()))
 
     #### Load model

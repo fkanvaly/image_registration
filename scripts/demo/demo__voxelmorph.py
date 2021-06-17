@@ -1,6 +1,7 @@
 import streamlit as st
 import sys
 
+
 sys.path.append("./")
 
 
@@ -33,8 +34,10 @@ def app():
     **Experimental setup :** They did an atlas based registration. This means that we take the atlas model of the brain as reference and we try to transform our input to that reference.
     
     They use an atlas computed using an external dataset . Each input volume pair consists of the atlas (image f) and a volume from the dataset (image m). image pairs using the same fixed atlas for all examples. 
-
+    
+     ![model](https://i.imgur.com/JGyaLyu.png)
      """)
+    
 
 
 if __name__ == '__main__':

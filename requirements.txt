@@ -1,7 +1,4 @@
 voxelmorph
-torch
-torchvision
-torchaudio
 streamlit
 torchsummary
 tensorflow
