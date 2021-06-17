@@ -2,7 +2,7 @@ import os
 import torch
 import numpy as np
 import torch.nn as nn
-from scripts.mnist.utils import to_nametuple, Grad2D
+from scripts.mnist.utils import to_nametuple, mse_loss, smoothloss, antifoldloss
 from scripts.mnist.data_loader import MNISTData
 from torchsummary import summary
 from tqdm import tqdm
@@ -11,30 +11,38 @@ os.environ['VXM_BACKEND'] = 'pytorch'
 import voxelmorph as vxm
 
 
-class VoxelMNIST(nn.Module):
+class UnetMNIST(nn.Module):
     def __init__(self, inshape, nb_features, ndim):
         super().__init__()
         self.unet = vxm.networks.Unet(inshape=inshape, nb_features=nb_features)
         self.flow = nn.Conv2d(nb_features[1][-1], ndim, 3, padding=1)
-        self.transformer = vxm.layers.SpatialTransformer(inshape)
 
     def forward(self, source, target):
         x = torch.cat([source, target], dim=1)
         x = self.unet(x)
         flow_field = self.flow(x)
+        return flow_field
+
+
+class SpatialT(nn.Module):
+    def __init__(self, inshape):
+        super().__init__()
+        self.transformer = vxm.layers.SpatialTransformer(inshape)
+
+    def forward(self, source, flow_field):
         moving_transformed = self.transformer(source, flow_field)
-        return moving_transformed, flow_field
+        return moving_transformed
 
 
-def build_vxm(config):
+def build_inverse(config):
     # une architecture
     nb_features = [
         [32, 32, 32, 32],  # encoder features
         [32, 32, 32, 32, 32, 16]  # decoder features
     ]
 
-    model = VoxelMNIST(config.inshape, nb_features, config.ndim)
-
+    model = UnetMNIST(config.inshape, nb_features, config.ndim)
+    transform = SpatialT(config.inshape)
     # prepare the model for training and send to device
     model.to(config.device)
     model.train()
@@ -42,46 +50,41 @@ def build_vxm(config):
     # set optimizer
     optimizer = torch.optim.Adam(model.parameters(), lr=config.lr)
 
-    # prepare image loss
-    if config.image_loss == 'ncc':
-        image_loss_func = vxm.losses.NCC().loss
-    elif config.image_loss == 'mse':
-        image_loss_func = vxm.losses.MSE().loss
-    else:
-        raise ValueError('Image loss should be "mse" or "ncc", but found "%s"' % config.image_loss)
-
-    L_sim = image_loss_func
-    L_smooth = Grad2D('l2').loss
-
-    return to_nametuple({'model': model, 'optimizer': optimizer,
-                         'losses': {'sim': L_sim, 'smooth': L_smooth}})
+    return to_nametuple({'model': model, 'transform': transform, 'optimizer': optimizer,
+                         'losses': {'sim': mse_loss,
+                                    'inv': mse_loss,
+                                    'antifold': antifoldloss,
+                                    'smooth': smoothloss}})
 
 
-def train_vxm(config, trainer, train_data, verbose=True):
-    loss_hist = []
-    # training loops
-    zero_phi = np.zeros([config.batch_size_train, *config.inshape, config.ndim])
+def train_inverse(config, trainer, train_data, verbose=True):
+    lossall = np.zeros((5, config.epochs))
 
     for epoch in tqdm(range(config.epochs)):
         for step in range(config.steps_per_epoch):
             # generate inputs (and true outputs) and convert them to tensors
             x_fix, x_mvt = next(train_data['fix']), next(train_data['moving'])
             size = min(x_fix.shape[0], x_mvt.shape[0])
-            x_fix, x_mvt = x_fix[:size], x_mvt[:size]  # because the remaining batch element can have diff size
-            inputs = [x_mvt, x_fix]
+            X, Y = x_fix[:size], x_mvt[:size]  # because the remaining batch element can have diff size
 
-            # run inputs through the model to produce a warped image and flow field
-            x_pred, flow = trainer.model(*inputs)
+            F_xy = trainer.model(*[X, Y])
+            F_yx = trainer.model(*[Y, X])
 
-            # calculate total loss
-            loss_sim = trainer.losses['sim'](x_pred, x_fix)
-            loss_smooth = config.λ * trainer.losses['smooth'](None, flow)
-            loss = loss_sim + loss_smooth
+            X_Y = trainer.transform(X, F_xy)
+            Y_X = trainer.transform(Y, F_yx)
 
+            F_xy_ = trainer.transform(-F_yx, F_yx)
+            F_yx_ = trainer.transform(-F_xy, F_xy)
+
+            loss1 = trainer.losses['sim'](Y, X_Y) + trainer.losses['sim'](X, Y_X)  # range_flow ?
+            loss2 = config.inverse * (trainer.losses['inv'](F_xy, F_xy_) + trainer.losses['inv'](F_yx, F_yx_))
+            loss3 = config.antifold * (trainer.losses['antifold'](F_xy) + trainer.losses['antifold'](F_yx))
+            loss4 = config.smooth * (trainer.losses['smooth'](F_xy) + trainer.losses['smooth'](F_yx))
+
+            loss = loss1 + loss2 + loss3 + loss4
             loss_info = 'loss: %.6f ' % loss.item()
 
-            # backpropagate and optimize
-
+            # back propagate and optimize
             trainer.optimizer.zero_grad()
             loss.backward()
             trainer.optimizer.step()
@@ -93,16 +96,16 @@ def train_vxm(config, trainer, train_data, verbose=True):
                     step_info = ('step: %d/%d' % (step + 1, config.steps_per_epoch)).ljust(14)
                     print('  '.join((epoch_info, step_info, loss_info)), flush=True)
 
-        loss_hist.append(loss.item())
+        lossall[:,epoch] = np.array([loss.item(),loss1.item(),loss2.item(),loss3.item(),loss4.item()])
 
-    return loss_hist
+    return lossall
 
 
-def load_vxm(path, device='cpu'):
+def load_inverse(path, device='cpu'):
     checkpoint = torch.load(path)
     conf = to_nametuple(checkpoint['config'])
 
-    trainer = build_vxm(conf)
+    trainer = build_inverse(conf)
     trainer.model.load_state_dict(checkpoint['model_state_dict'])
     trainer.optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
 
@@ -118,19 +121,19 @@ def train(conf, save=True, save_name='default', save_folder='output', verbose=Tr
     x_train, x_val = mnist_data.train_val(conf.fix, conf.moving)
 
     # build model
-    trainer = build_vxm(conf)
+    trainer = build_inverse(conf)
 
     if verbose:
         print(summary(trainer.model, [(1, *conf.inshape), (1, *conf.inshape)]))
 
     # train model
-    train_vxm(conf, trainer, x_train, verbose)
+    train_inverse(conf, trainer, x_train, verbose)
 
     # save model
     if save:
         torch.save({'config': dict(conf._asdict()),
                     'model_state_dict': trainer.model.state_dict(),
                     'optimizer_state_dict': trainer.optimizer.state_dict(),
-                    }, os.path.join(save_folder, f'model-vxm-{save_name}.pt'))
+                    }, os.path.join(save_folder, f'model-inverse-{save_name}.pt'))
 
     return trainer

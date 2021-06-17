@@ -86,12 +86,19 @@ class MNISTData:
         return {"fix": fix_train_loader, "moving": moving_train_loader}, {"fix": fix_val_loader,
                                                                           "moving": moving_val_loader}
 
-    def test_data(self, fix, moving):
+    def test_data(self, fix, moving, dataset=False):
         fix_digit = self.x_test_load[self.y_test_load == fix, ...]
         moving_digit = self.x_test_load[self.y_test_load == moving, ...]
         # same moving and fix
-        fix_data = repeater(torch.utils.data.DataLoader(RegisterMNIST(fix_digit),
+        fix_dataset = RegisterMNIST(fix_digit)
+        moving_dataset = RegisterMNIST(moving_digit)
+
+        if dataset:
+            return {"fix": fix_dataset, "moving": moving_dataset}
+
+        fix_data = repeater(torch.utils.data.DataLoader(fix_dataset,
                                                         batch_size=10, shuffle=True))
-        moving_data = repeater(torch.utils.data.DataLoader(RegisterMNIST(moving_digit),
+        moving_data = repeater(torch.utils.data.DataLoader(moving_dataset,
                                                            batch_size=10, shuffle=True))
         return {"fix": fix_data, "moving": moving_data}
+

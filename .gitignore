@@ -2,6 +2,7 @@
 __pycache__/
 __pycache__
 .idea/
+*.pt
 .DS_Store
 *.py[cod]
 *$py.class

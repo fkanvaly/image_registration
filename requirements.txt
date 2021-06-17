@@ -6,3 +6,4 @@ streamlit
 torchsummary
 tensorflow
 scikit-learn
+tqdm

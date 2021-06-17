@@ -2,6 +2,8 @@ import torch
 import numpy as np
 from collections import namedtuple
 
+import torch.nn.functional as F
+
 
 ######################################
 #           DATA UTILS               #
@@ -113,3 +115,26 @@ def jacobian_det(flow):
 
             jac_det[i, j] = A * D - B * C
     return jac_det
+
+
+def smoothloss(y_pred):
+    dy = torch.abs(y_pred[:, :, 1:, :] - y_pred[:, :, :-1, :])
+    dx = torch.abs(y_pred[:, :, :, 1:] - y_pred[:, :, :, :-1])
+    return (torch.mean(dx * dx) + torch.mean(dy * dy)) / 2.0
+
+
+def antifoldloss(y_pred):
+    dy = y_pred[:, :, :-1, :] - y_pred[:, :, 1:, :] - 1
+    dx = y_pred[:, :, :, :-1] - y_pred[:, :, :, 1:] - 1
+
+    dy = F.relu(dy) * torch.abs(dy * dy)
+    dx = F.relu(dx) * torch.abs(dx * dx)
+    return (torch.mean(dx) + torch.mean(dy)) / 2.0
+
+
+def mse_loss(input, target):
+    y_true_f = input.view(-1)
+    y_pred_f = target.view(-1)
+    diff = y_true_f - y_pred_f
+    mse = torch.mul(diff, diff).mean()
+    return mse
