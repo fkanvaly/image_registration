@@ -98,7 +98,7 @@ def train_vxm(config, trainer, train_data, verbose=True, device="cpu"):
     return loss_hist
 
 
-def load_vxm(path, device='cpu'):
+def load_vxm(path, i,device='cpu'):
     checkpoint = torch.load(path)
     conf = to_nametuple(checkpoint['config'])
 
