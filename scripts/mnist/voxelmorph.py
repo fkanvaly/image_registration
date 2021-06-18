@@ -65,7 +65,7 @@ def train_vxm(config, trainer, train_data, verbose=True, device="cpu"):
             # generate inputs (and true outputs) and convert them to tensors
             x_fix, x_mvt = next(train_data['fix']), next(train_data['moving'])
             size = min(x_fix.shape[0], x_mvt.shape[0])
-            x_fix, x_mvt = x_fix[:size].to(device).float(), x_mvt[:size].to(device).float()  # because the remaining batch element can have diff size
+            x_fix, x_mvt = x_fix[:size].to(device), x_mvt[:size].to(device)  # because the remaining batch element can have diff size
             inputs = [x_mvt, x_fix]
 
             # run inputs through the model to produce a warped image and flow field
@@ -96,12 +96,12 @@ def train_vxm(config, trainer, train_data, verbose=True, device="cpu"):
     return loss_hist
 
 
-def load_vxm(path, device='cpu'):
+def load_vxm(data_name, path, device='cpu'):
     checkpoint = torch.load(path)
     conf = to_nametuple(checkpoint['config'])
     hist = checkpoint['hist']
 
-    trainer = build_vxm(conf, device)
+    trainer = build_vxm(data_name, conf, device)
     trainer.model.load_state_dict(checkpoint['model_state_dict'])
     trainer.optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
 

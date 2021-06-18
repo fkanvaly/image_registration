@@ -18,7 +18,7 @@ args = parser.parse_args()
 
 # config
 if args.data=="mnist":
-    from config import vxm
+    from config_mnist import vxm
     conf = vxm[args.name]
 else:
     from config_brain import vxm

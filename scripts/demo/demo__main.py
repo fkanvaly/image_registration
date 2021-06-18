@@ -1,7 +1,7 @@
 import sys
 
 sys.path.append("./")
-from scripts.demo import mutliapp, demo__intro, demo__experiment, demo__voxelmorph, demo__inverse, demo__mnist_inv, demo__mnist_vxm, demo__brain_vxm, demo__brain_inv
+from scripts.demo import mutliapp, demo__intro, demo__voxelmorph, demo__inverse, demo__mnist_inv, demo__mnist_vxm, demo__brain_vxm, demo__brain_inv
 
 app = mutliapp.MultiApp()
 app.add_app("Introduction", demo__intro.app)

@@ -3,7 +3,7 @@ import torch
 import numpy as np
 import torch.nn as nn
 from scripts.mnist.utils import to_nametuple, mse_loss, smoothloss, antifoldloss
-from scripts.mnist.data_loader import MNISTData
+from scripts.mnist.data_loader import MNISTData, BrainData
 from torchsummary import summary
 from tqdm import tqdm
 
@@ -34,7 +34,7 @@ class SpatialT(nn.Module):
         return moving_transformed
 
 
-def build_inverse(config, device="cpu"):
+def build_inverse(data_name, config, device="cpu"):
     # une architecture
     model = UnetMNIST(config.inshape, config.nb_features, config.ndim)
     transform = SpatialT(config.inshape)
@@ -61,7 +61,7 @@ def train_inverse(config, trainer, train_data, verbose=True, device="cpu"):
             # generate inputs (and true outputs) and convert them to tensors
             x_fix, x_mvt = next(train_data['fix']), next(train_data['moving'])
             size = min(x_fix.shape[0], x_mvt.shape[0])
-            X, Y = x_fix[:size].to(device).float(), x_mvt[:size].to(device).float()  # because the remaining batch element can have diff size
+            X, Y = x_fix[:size].to(device), x_mvt[:size].to(device)  # because the remaining batch element can have diff size
 
             F_xy = trainer.model(*[X, Y])
             F_yx = trainer.model(*[Y, X])
@@ -97,12 +97,12 @@ def train_inverse(config, trainer, train_data, verbose=True, device="cpu"):
     return lossall
 
 
-def load_inverse(path, device='cpu'):
+def load_inverse(data_name, path, device='cpu'):
     checkpoint = torch.load(path)
     conf = to_nametuple(checkpoint['config'])
     hist = checkpoint['hist']
 
-    trainer = build_inverse(conf)
+    trainer = build_inverse(data_name, conf)
     trainer.model.load_state_dict(checkpoint['model_state_dict'])
     trainer.optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
 

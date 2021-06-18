@@ -18,7 +18,7 @@ args = parser.parse_args()
 
 # config
 if args.data=="mnist":
-    from config import inverse
+    from config_mnist import inverse
     conf = inverse[args.name]
 else:
     from config_brain import inverse

@@ -8,7 +8,7 @@ vxm = {
         'ndim': 2,
         'epochs': 10,
         'batch_size_train': 32,
-        'log_interval': 10,
+        'log_interval': 20,
         'steps_per_epoch': 30,
         'inshape': (32, 32),
 
@@ -27,7 +27,7 @@ vxm = {
         # train
         'lr': 1e-3,
         'ndim': 2,
-        'epochs': 10,
+        'epochs': 20,
         'batch_size_train': 32,
         'log_interval': 10,
         'steps_per_epoch': 30,
@@ -48,7 +48,7 @@ vxm = {
         # train
         'lr': 1e-3,
         'ndim': 2,
-        'epochs': 10,
+        'epochs': 20,
         'batch_size_train': 32,
         'log_interval': 10,
         'steps_per_epoch': 30,
@@ -90,3 +90,12 @@ inverse = {
         ]
     }),
 }
+
+
+
+
+
+
+
+
+python train_vxm.py -s --name default --device cuda -d brain

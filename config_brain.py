@@ -4,11 +4,11 @@ from scripts.mnist.utils import to_nametuple
 vxm = {
     "default": to_nametuple({
         # train
-        'lr': 1e-3,
+        'lr': 1e-4,
         'ndim': 2,
-        'epochs': 10,
+        'epochs': 30,
         'batch_size_train': 32,
-        'log_interval': 10,
+        'log_interval': 30,
         'steps_per_epoch': 30,
         'inshape': (192, 160),
 
@@ -25,9 +25,9 @@ vxm = {
 
     "lambda-0": to_nametuple({
         # train
-        'lr': 1e-3,
+        'lr': 1e-4,
         'ndim': 2,
-        'epochs': 10,
+        'epochs': 30,
         'batch_size_train': 32,
         'log_interval': 10,
         'steps_per_epoch': 30,
@@ -46,9 +46,9 @@ vxm = {
 
     "lambda-0_01": to_nametuple({
         # train
-        'lr': 1e-3,
+        'lr': 1e-4,
         'ndim': 2,
-        'epochs': 10,
+        'epochs': 30,
         'batch_size_train': 32,
         'log_interval': 10,
         'steps_per_epoch': 30,
@@ -69,9 +69,9 @@ vxm = {
 inverse = {
     "default": to_nametuple({
         # train
-        'lr': 1e-3,
+        'lr': 1e-4,
         'ndim': 2,
-        'epochs': 10,
+        'epochs': 30,
         'batch_size_train': 32,
         'log_interval': 10,
         'steps_per_epoch': 30,

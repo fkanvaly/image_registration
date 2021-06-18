@@ -5,7 +5,6 @@ import numpy as np
 sys.path.append("./")
 
 from scripts.mnist.data_loader import MNISTData
-from config import vxm
 import os
 from scripts.mnist.evaluate import evaluate_image
 from scripts.mnist.voxelmorph import load_vxm
@@ -36,7 +35,7 @@ def st_load_test_data(src, dst):
 @st.cache(allow_output_mutation=True)
 def st_load_model(name):
     path = os.path.join(f'output/model-mnist-vxm-{name}.pt')
-    conf, trainer, hist = load_vxm(path)
+    conf, trainer, hist = load_vxm("mnist", path)
     trainer.model.eval()
     return conf, trainer, hist
 
@@ -68,7 +67,7 @@ def double_slider(n1, n2, k):
     with col1:
         idx1 = st.slider(f'Source data index | id:{k}', 0, n1, 1)
     with col2:
-        idx2 = st.slider(f'Target data index | id:{k + 1}', 0, n2, 1)
+        idx2 = st.slider(f'Target data index | id:{k + 1}', 0, n2, 2)
 
     return idx1, idx2
 
@@ -88,13 +87,18 @@ def double_family(k):
     return src, dst
 
 
+
 def eval_model(model, data, k):
     N_fix, N_mvg = len(data['fix']), len(data['moving'])
     idx1, idx2 = double_slider(N_fix, N_mvg, k)
     val_fix = data['fix'][idx1].unsqueeze(0)
     val_mvt = data['moving'][idx2].unsqueeze(0)
     res = evaluate_image(model, val_fix, val_mvt, mode="vxm", show=False)
-    st.pyplot(res['fig'])
+    col1, col2 = st.beta_columns([5,2])
+    with col1:
+        st.pyplot(res['fig'])
+    with col2:
+        st.pyplot(res['flow'])
 
 
 def app():
@@ -104,7 +108,9 @@ def app():
     ### 🧠 Load model
      """)
 
-    name = st.selectbox('config: λ = 0.5 -> lambda-0_5', list(vxm.keys()))
+    pattern = "model-mnist-vxm"
+    model_availbale = [ filename[len(pattern)+1:-3] for filename in os.listdir('./output') if pattern in filename]
+    name = st.selectbox('config:', model_availbale)
 
     #### Load model
     conf, model, hist = st_load_model(name)
@@ -116,10 +122,10 @@ def app():
         data1 = st_load_test_data(conf.fix, conf.moving)
         eval_model(model, data1, 0)
 
-        st.write("""### 🧪 Evaluation 2 - Generalization""")
-        st.write("We can classify the numbers into 3 family: `0 hole`, `1 hole`, `2 holes`")
-        for k, v in topology.items():
-            st.write(f"`{k}`: {v}")
+    st.write("""### 🧪 Evaluation 2 - Generalization""")
+    st.write("We can classify the numbers into 3 family: `0 hole`, `1 hole`, `2 holes`")
+    for k, v in topology.items():
+        st.write(f"`{k}`: {v}")
 
     st.write("""
     ___

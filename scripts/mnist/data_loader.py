@@ -21,7 +21,7 @@ class RegisterDataset(Dataset):
         self.transform = torchvision.transforms.ToTensor()
 
     def __getitem__(self, idx):
-        return self.transform(self.X[idx])
+        return self.transform(self.X[idx]).float()
 
     def __len__(self):
         return self.X.shape[0]
