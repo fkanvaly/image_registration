@@ -64,7 +64,7 @@ def app():
     st.write(conf)
 
     st.write("""### 🧪 Evaluation - Validation set""")
-    agree1 = st.checkbox('Display ? id:1')
+    agree1 = st.checkbox('Display ? id:1', True)
     if agree1:
         data1 = st_load_test_data(conf.fix, conf.moving)
         eval_model(trainer, data1, 0)

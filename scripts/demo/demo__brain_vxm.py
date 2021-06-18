@@ -73,7 +73,7 @@ def app():
     st.write(conf)
 
     st.write("""### 🧪 Evaluation 1 - Validation set""")
-    agree1 = st.checkbox('Display ? id:1')
+    agree1 = st.checkbox('Display ? id:1', True)
     if agree1:
         data1 = st_load_data()
         eval_model(model, data1, 0)

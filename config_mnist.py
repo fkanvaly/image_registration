@@ -90,12 +90,3 @@ inverse = {
         ]
     }),
 }
-
-
-
-
-
-
-
-
-python train_vxm.py -s --name default --device cuda -d brain

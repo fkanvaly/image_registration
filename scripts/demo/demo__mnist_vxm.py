@@ -117,7 +117,7 @@ def app():
     st.write(conf)
 
     st.write("""### 🧪 Evaluation 1 - Validation set""")
-    agree1 = st.checkbox('Display ? id:1')
+    agree1 = st.checkbox('Display ? id:1', True)
     if agree1:
         data1 = st_load_test_data(conf.fix, conf.moving)
         eval_model(model, data1, 0)
@@ -132,7 +132,7 @@ def app():
     ### 〰️ Same topology transfert
     """)
     st.write("""- _** same number type**_ 1️⃣ -> 1️⃣""")
-    agree2 = st.checkbox('Display ? id:2')
+    agree2 = st.checkbox('Display ? id:2', True)
     if agree2:
         fam_name = family(0)
         topo1 = topology[fam_name]
@@ -141,7 +141,7 @@ def app():
         eval_model(model, data2, 1)
 
     st.write("""- _** different number type**_ 1️⃣ ->2️⃣""")
-    agree3 = st.checkbox('Display ? id:3')
+    agree3 = st.checkbox('Display ? id:3', True)
     if agree3:
         fam_name = family(1)
         topo1 = topology[fam_name]
@@ -153,7 +153,7 @@ def app():
     ___
     ### ♾️ Different topology transfert
     """)
-    agree4 = st.checkbox('Display ? id:4')
+    agree4 = st.checkbox('Display ? id:4', True)
     if agree4:
         src_fam_name, dst_fam_name = double_family(2)
         topo1 = topology[src_fam_name]

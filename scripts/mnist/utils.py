@@ -86,6 +86,30 @@ def Dice(segm, segm_ref):
     dice = 2.0 * intersection.sum() / (segm.sum() + segm_ref.sum())
     return dice
 
+#new:
+#inference time:  0.04457521438598633 s
+#jacob time:  0.0006272792816162109 s
+#dice time:  0.00046324729919433594 s
+def jacobian_det(flow):
+    size = flow.shape[2:]
+    n = flow.shape[2]
+    vectors = [torch.arange(0, s) for s in size]
+    grids = torch.meshgrid(vectors)
+    grid = torch.stack(grids)
+    grid = torch.unsqueeze(grid, 0)
+    grid = grid.type(torch.FloatTensor)
+
+    new_locs = (grid + flow).squeeze()
+    jac_det = np.zeros(size)
+    
+    n1, n2 = size[0]-1, size[1]-1
+    dx = new_locs[:, :, 1:] - new_locs[:, :, :-1]
+    dy = new_locs[:, 1:, :] - new_locs[:, :-1, :]
+    A, C = dx[0,:][:n1,:n2], dx[1,:][:n1,:n2]
+    B, D = dy[0,:][:n1,:n2], dy[1,:][:n1,:n2]
+    det = A*D - B*C
+    
+    return det.numpy()
 
 #old : 
 #inference time:  0.04196906089782715 s
@@ -125,30 +149,7 @@ def jacobian_det_old(flow):
             jac_det[i, j] = A * D - B * C
     return jac_det
 
-#new:
-#inference time:  0.04457521438598633 s
-#jacob time:  0.0006272792816162109 s
-#dice time:  0.00046324729919433594 s
-def jacobian_det(flow):
-    size = flow.shape[2:]
-    n = flow.shape[2]
-    vectors = [torch.arange(0, s) for s in size]
-    grids = torch.meshgrid(vectors)
-    grid = torch.stack(grids)
-    grid = torch.unsqueeze(grid, 0)
-    grid = grid.type(torch.FloatTensor)
 
-    new_locs = (grid + flow).squeeze()
-    jac_det = np.zeros(size)
-    
-    n1, n2 = size[0]-1, size[1]-1
-    dx = new_locs[:, :, 1:] - new_locs[:, :, :-1]
-    dy = new_locs[:, 1:, :] - new_locs[:, :-1, :]
-    A, C = dx[0,:][:n1,:n2], dx[1,:][:n1,:n2]
-    B, D = dy[0,:][:n1,:n2], dy[1,:][:n1,:n2]
-    det = A*D - B*C
-    
-    return det.numpy()
 
 
 def smoothloss(y_pred):
