@@ -11,7 +11,7 @@ import numpy as np
 #           DATA UTILS               #
 ######################################
 
-class RegisterMNIST(Dataset):
+class RegisterDataset(Dataset):
     """
     Generate a selected digit data from MNIST
     """
@@ -33,6 +33,32 @@ def repeater(data_loader):
             yield data
 
 
+class BrainData:
+    def __init__(self):
+        npz = np.load('input/tutorial_data.npz')
+        self.x_train = RegisterDataset(npz['train'])
+        self.x_val = RegisterDataset(npz['validate'])
+        
+    def train_val(self, batch=32):
+        fix_train_loader = repeater(torch.utils.data.DataLoader(self.x_train, batch_size=batch, shuffle=True))
+        moving_train_loader = repeater(torch.utils.data.DataLoader(self.x_train, batch_size=batch, shuffle=True))
+        
+        fix_val_loader = repeater(torch.utils.data.DataLoader(self.x_val, batch_size=batch, shuffle=True))
+        moving_val_loader = repeater(torch.utils.data.DataLoader(self.x_val, batch_size=batch, shuffle=True))
+        
+        return {"fix": fix_train_loader, "moving": moving_train_loader}, {"fix": fix_val_loader,
+                                                                      "moving": moving_val_loader}
+    
+    def test_data(self, dataset=False):
+        if dataset:
+            return {"fix": self.x_val, "moving": self.x_val}
+
+        fix_loader = repeater(torch.utils.data.DataLoader(self.x_val, batch_size=batch, shuffle=True))
+        moving_loader = repeater(torch.utils.data.DataLoader(self.x_val, batch_size=batch, shuffle=True))
+        
+        return {"fix": fix_loader, "moving": moving_loader}
+    
+            
 class MNISTData:
     """
     Permet de generer un dataloader pour l'entrainnement avec les chiffres qu'on veut
@@ -68,11 +94,11 @@ class MNISTData:
 
         # Pytorch Dataset
         # train
-        fix_train_dataset = RegisterMNIST(x_train[y_train == fix_digit, ...])
-        moving_train_dataset = RegisterMNIST(x_train[y_train == moving_digit, ...])
+        fix_train_dataset = RegisterDataset(x_train[y_train == fix_digit, ...])
+        moving_train_dataset = RegisterDataset(x_train[y_train == moving_digit, ...])
         # validation
-        fix_val_dataset = RegisterMNIST(x_val[y_val == fix_digit, ...])
-        moving_val_dataset = RegisterMNIST(x_val[y_val == moving_digit, ...])
+        fix_val_dataset = RegisterDataset(x_val[y_val == fix_digit, ...])
+        moving_val_dataset = RegisterDataset(x_val[y_val == moving_digit, ...])
 
         # Dataloader from dataset
         # train
@@ -90,8 +116,8 @@ class MNISTData:
         fix_digit = self.x_test_load[self.y_test_load == fix, ...]
         moving_digit = self.x_test_load[self.y_test_load == moving, ...]
         # same moving and fix
-        fix_dataset = RegisterMNIST(fix_digit)
-        moving_dataset = RegisterMNIST(moving_digit)
+        fix_dataset = RegisterDataset(fix_digit)
+        moving_dataset = RegisterDataset(moving_digit)
 
         if dataset:
             return {"fix": fix_dataset, "moving": moving_dataset}

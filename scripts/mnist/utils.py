@@ -40,7 +40,7 @@ class Grad2D:
         return grad
 
 
-def prop_bij(flow):
+def prop_inj(flow):
     size = flow.shape[2:]
     n = flow.shape[2]
     vectors = [torch.arange(0, s) for s in size]
@@ -60,14 +60,19 @@ def prop_bij(flow):
     return nb_same / true_total
 
 
-def multi_props_bij(model, x_val):
+def multi_props_inj(trainer, x_val, mode):
     props = np.zeros(20)
     for k in range(len(props)):
         val_fix = next(x_val['moving'])[:1, ...]
         val_mvt = next(x_val['moving'])[:1, ...]
+    
 
         with torch.no_grad():
-            x_val_pred, flow_val_pred = model(val_mvt, val_fix)
+            if mode=="vxm":
+                x_val_pred, flow_val_pred = trainer.model(val_mvt, val_fix)
+            if mode=="inv":
+                flow_val_pred = trainer.model(val_mvt, val_fix) 
+                x_val_pred = trainer.transform(val_mvt, flow_val_pred)
             props[k] = prop_bij(flow_val_pred)
     return props.sum() / len(props)
 

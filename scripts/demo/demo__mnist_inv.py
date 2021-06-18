@@ -7,7 +7,7 @@ sys.path.append("./")
 from scripts.mnist.data_loader import MNISTData
 from config import inverse
 import os
-from scripts.mnist.evaluate import evaluate_inv
+from scripts.mnist.evaluate import evaluate_image
 from scripts.mnist.inverse import load_inverse
 
 topology = {'0 hole': [1, 2, 3, 4, 5],
@@ -87,7 +87,7 @@ def eval_model(model, data, k):
     idx1, idx2 = double_slider(N_fix, N_mvg, k)
     val_fix = data['fix'][idx1].unsqueeze(0)
     val_mvt = data['moving'][idx2].unsqueeze(0)
-    res = evaluate_inv(model, val_fix, val_mvt, False)
+    res = evaluate_image(model, val_fix, val_mvt, "inv", show=False)
     st.pyplot(res['fig'])
 
 
@@ -98,7 +98,6 @@ def app():
     ### 🧠 Load model
      """)
     
-    device = st.selectbox('device:', ['cpu', 'cuda'])
     name = st.selectbox('config: λ = 0.5 -> lambda-0_5', list(inverse.keys()))
 
     #### Load model

@@ -7,12 +7,11 @@ sys.path.append("./")
 from scripts.mnist.data_loader import MNISTData
 from config import vxm
 import os
-from scripts.mnist.evaluate import evaluate_vxm
+from scripts.mnist.evaluate import evaluate_image
 from scripts.mnist.voxelmorph import load_vxm
 
 ## Evaluate
 import torch
-from scripts.mnist.utils import jacobian_det, multi_props_bij, Dice
 import neurite as ne
 from matplotlib import colors
 import numpy as np
@@ -34,12 +33,12 @@ def st_load_test_data(src, dst):
     return data
 
 
-@st.cache
+@st.cache(allow_output_mutation=True)
 def st_load_model(name):
     path = os.path.join(f'output/model-vxm-{name}.pt')
     conf, trainer = load_vxm(path)
     trainer.model.eval()
-    return conf, trainer.model
+    return conf, trainer
 
 
 def digit_choice(k, same=False, src_d=None, dst_d=None):
@@ -89,39 +88,12 @@ def double_family(k):
     return src, dst
 
 
-def evaluate_vxm(model, fix, moving, show=True):
-    with torch.no_grad():
-        moved, flow = model(moving, fix)
-
-    jacobian = jacobian_det(flow)
-
-    images = [img[0, 0, :, :].detach().numpy() for img in [moving, fix, moved]]
-    titles = ['source', 'target', 'moved', 'jacobian', 'jacobian (binary)']
-    cmaps = ['gray', 'gray', 'gray', 'Greens', 'Greens']
-    norms = [colors.Normalize(vmin=vmin, vmax=vmax) for vmin, vmax in [[0, 1], [0, 1], [0, 1], [0, 1], [0, 1]]]
-
-    fig, axes = ne.plot.slices([*images, jacobian, 1 * (np.abs(jacobian) > 0.01)], titles=titles,
-                               norms=norms, cmaps=cmaps, do_colorbars=True);
-    ## Eval
-    # print("Flow :")
-    ne.plot.flow([flow.squeeze().permute(1, 2, 0)], width=4, show=show);
-    # inj_score = 100 * (1 - multi_props_bij(trainer.model, data))
-    # print("Injectivity indicator : ", inj_score)
-    moved, fixed = moved[0, 0, :, :].detach().numpy(), fix[0, 0, :, :].detach().numpy()
-    dice = Dice(moved, fixed)
-    # print("DICE score %.2f" % dice)
-
-    return {"fig": fig, 'score': {'dice': dice,
-                                  # 'inj': inj_score
-                                  }}
-
-
 def eval_model(model, data, k):
     N_fix, N_mvg = len(data['fix']), len(data['moving'])
     idx1, idx2 = double_slider(N_fix, N_mvg, k)
     val_fix = data['fix'][idx1].unsqueeze(0)
     val_mvt = data['moving'][idx2].unsqueeze(0)
-    res = evaluate_vxm(model, val_fix, val_mvt, False)
+    res = evaluate_image(model, val_fix, val_mvt, mode="vxm", show=False)
     st.pyplot(res['fig'])
 
 

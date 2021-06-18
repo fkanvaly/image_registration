@@ -3,7 +3,7 @@ import torch
 import numpy as np
 import torch.nn as nn
 from scripts.mnist.utils import to_nametuple, Grad2D
-from scripts.mnist.data_loader import MNISTData
+from scripts.mnist.data_loader import MNISTData, BrainData
 from torchsummary import summary
 from tqdm import tqdm
 
@@ -98,7 +98,7 @@ def train_vxm(config, trainer, train_data, verbose=True, device="cpu"):
     return loss_hist
 
 
-def load_vxm(path, i,device='cpu'):
+def load_vxm(path, device='cpu'):
     checkpoint = torch.load(path)
     conf = to_nametuple(checkpoint['config'])
 
@@ -112,15 +112,18 @@ def load_vxm(path, i,device='cpu'):
     return conf, trainer
 
 
-def train(conf, device="cpu", save=True, save_name='default', save_folder='output',  verbose=True):
+def train(data_name, conf, device="cpu", save=True, save_name='default', save_folder='output', verbose=True):
     print(f'train on {device}')
     if device=="cuda":
         os.environ['CUDA_VISIBLE_DEVICES'] = '0'
         torch.backends.cudnn.deterministic = True
         
     # load data
-    mnist_data = MNISTData()
-    x_train, x_val = mnist_data.train_val(conf.fix, conf.moving)
+    if data_name=="mnist":
+        mnist_data = MNISTData()
+        x_train, x_val = mnist_data.train_val(conf.fix, conf.moving)
+    elif data_name == "inv":
+        brain_data = BrainData()
 
     # build model
     trainer = build_vxm(conf, device)
@@ -129,13 +132,14 @@ def train(conf, device="cpu", save=True, save_name='default', save_folder='outpu
         print(summary(trainer.model, [(1, *conf.inshape), (1, *conf.inshape)]))
 
     # train model
-    train_vxm(conf, trainer, x_train, verbose, device)
+    hist = train_vxm(conf, trainer, x_train, verbose, device)
 
     # save model
     if save:
         torch.save({'config': dict(conf._asdict()),
+                    'hist': hist,
                     'model_state_dict': trainer.model.state_dict(),
                     'optimizer_state_dict': trainer.optimizer.state_dict(),
-                    }, os.path.join(save_folder, f'model-vxm-{save_name}.pt'))
+                    }, os.path.join(save_folder, f'model-{data_name}-vxm-{save_name}.pt'))
 
     return trainer
