@@ -26,15 +26,13 @@ class VoxelMNIST(nn.Module):
         return moving_transformed, flow_field
 
 
-def build_vxm(config, device="cpu"):
-    # une architecture
-    nb_features = [
-        [32, 32, 32, 32],  # encoder features
-        [32, 32, 32, 32, 32, 16]  # decoder features
-    ]
-
-    model = VoxelMNIST(config.inshape, nb_features, config.ndim)
-
+def build_vxm(data_name, config, device="cpu"):
+    # unet architecture
+    if data_name == "mnist":
+        model = VoxelMNIST(config.inshape, config.nb_features, config.ndim)
+    else: 
+        model = vxm.networks.VxmDense(config.inshape, config.nb_features, int_steps=0)
+        
     # prepare the model for training and send to device
     model.to(device)
     model.train()
@@ -67,7 +65,7 @@ def train_vxm(config, trainer, train_data, verbose=True, device="cpu"):
             # generate inputs (and true outputs) and convert them to tensors
             x_fix, x_mvt = next(train_data['fix']), next(train_data['moving'])
             size = min(x_fix.shape[0], x_mvt.shape[0])
-            x_fix, x_mvt = x_fix[:size].to(device), x_mvt[:size].to(device)  # because the remaining batch element can have diff size
+            x_fix, x_mvt = x_fix[:size].to(device).float(), x_mvt[:size].to(device).float()  # because the remaining batch element can have diff size
             inputs = [x_mvt, x_fix]
 
             # run inputs through the model to produce a warped image and flow field
@@ -101,6 +99,7 @@ def train_vxm(config, trainer, train_data, verbose=True, device="cpu"):
 def load_vxm(path, device='cpu'):
     checkpoint = torch.load(path)
     conf = to_nametuple(checkpoint['config'])
+    hist = checkpoint['hist']
 
     trainer = build_vxm(conf, device)
     trainer.model.load_state_dict(checkpoint['model_state_dict'])
@@ -109,7 +108,7 @@ def load_vxm(path, device='cpu'):
     trainer.model.to(device)
     print(f'model load on device: {device}')
 
-    return conf, trainer
+    return conf, trainer, hist
 
 
 def train(data_name, conf, device="cpu", save=True, save_name='default', save_folder='output', verbose=True):
@@ -122,11 +121,14 @@ def train(data_name, conf, device="cpu", save=True, save_name='default', save_fo
     if data_name=="mnist":
         mnist_data = MNISTData()
         x_train, x_val = mnist_data.train_val(conf.fix, conf.moving)
-    elif data_name == "inv":
+    elif data_name == "brain":
         brain_data = BrainData()
+        x_train, x_val = brain_data.train_val()
+    else:
+        assert False, f"wrong data name: {data_name}"
 
     # build model
-    trainer = build_vxm(conf, device)
+    trainer = build_vxm(data_name, conf, device)
 
     if verbose:
         print(summary(trainer.model, [(1, *conf.inshape), (1, *conf.inshape)]))

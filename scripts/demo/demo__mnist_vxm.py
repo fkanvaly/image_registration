@@ -35,10 +35,10 @@ def st_load_test_data(src, dst):
 
 @st.cache(allow_output_mutation=True)
 def st_load_model(name):
-    path = os.path.join(f'output/model-vxm-{name}.pt')
-    conf, trainer = load_vxm(path)
+    path = os.path.join(f'output/model-mnist-vxm-{name}.pt')
+    conf, trainer, hist = load_vxm(path)
     trainer.model.eval()
-    return conf, trainer
+    return conf, trainer, hist
 
 
 def digit_choice(k, same=False, src_d=None, dst_d=None):
@@ -107,7 +107,7 @@ def app():
     name = st.selectbox('config: λ = 0.5 -> lambda-0_5', list(vxm.keys()))
 
     #### Load model
-    conf, model = st_load_model(name)
+    conf, model, hist = st_load_model(name)
     st.write(conf)
 
     st.write("""### 🧪 Evaluation 1 - Validation set""")
