@@ -35,7 +35,6 @@ def app():
     
     They use an atlas computed using an external dataset . Each input volume pair consists of the atlas (image f) and a volume from the dataset (image m). image pairs using the same fixed atlas for all examples. 
     
-     ![model](https://i.imgur.com/JGyaLyu.png)
      """)
     
 

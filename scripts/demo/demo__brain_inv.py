@@ -20,7 +20,7 @@ def st_load_data():
 @st.cache(allow_output_mutation=True)
 def st_load_model(name):
     path = os.path.join(f'output/model-brain-inverse-{name}.pt')
-    conf, trainer, hist = load_vxm("brain", path)
+    conf, trainer, hist = load_inverse("brain", path)
     trainer.model.eval()
     return conf, trainer, hist
 
@@ -66,7 +66,7 @@ def app():
     st.write("""### 🧪 Evaluation - Validation set""")
     agree1 = st.checkbox('Display ? id:1', True)
     if agree1:
-        data1 = st_load_test_data(conf.fix, conf.moving)
+        data1 = st_load_data()
         eval_model(trainer, data1, 0)
 
 

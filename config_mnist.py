@@ -71,7 +71,7 @@ inverse = {
         # train
         'lr': 1e-3,
         'ndim': 2,
-        'epochs': 10,
+        'epochs': 20,
         'batch_size_train': 32,
         'log_interval': 10,
         'steps_per_epoch': 30,
