@@ -17,7 +17,7 @@ def evaluate_image(trainer, fix, moving, mode,  show=True):
     jacob_born = max(abs(jacob_det.min()), abs(jacob_det.max()))
 
     images = [img[0, 0, :, :].detach().numpy() for img in [moving, fix, moved]]
-    titles = ['source', 'target', 'moved', 'jacobian', 'jacobian (binary)']
+    titles = ['source', 'target', 'moved', 'jacobian_det', 'jacobian_det (binary)']
     cmaps = ['gray', 'gray', 'gray', 'bwr', 'Reds']
     norms = [colors.Normalize(vmin=vmin, vmax=vmax) for vmin, vmax in [[0, 1], [0, 1], [0, 1], [-jacob_born, jacob_born], [0,1]]]
 
@@ -32,7 +32,3 @@ def evaluate_image(trainer, fix, moving, mode,  show=True):
     
     return {"fig": fig, 'flow':fig_flow, 'dice': dice}
 
-
-def evaluate_inj(trainer, x_val, mode):
-    inj_score = 100 * (1 - multi_props_inj(trainer, x_val, mode))
-    return {"injectivity_indicator ", inj_score}

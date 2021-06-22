@@ -60,7 +60,7 @@ def prop_inj(flow):
     return nb_same / true_total
 
 
-def multi_props_inj(trainer, x_val, mode):
+def multi_props_inj(trainer, x_val, mode,  device='cpu'):
     props = np.zeros(20)
     for k in range(len(props)):
         val_fix = next(x_val['moving'])[:1, ...]
@@ -73,7 +73,7 @@ def multi_props_inj(trainer, x_val, mode):
             if mode=="inv":
                 flow_val_pred = trainer.model(val_mvt, val_fix) 
                 x_val_pred = trainer.transform(val_mvt, flow_val_pred)
-            props[k] = prop_bij(flow_val_pred)
+            props[k] = prop_inj(flow_val_pred)
     return props.sum() / len(props)
 
 

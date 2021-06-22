@@ -1,6 +1,7 @@
 import streamlit as st
 import sys
 import numpy as np
+import matplotlib.pyplot as plt
 import os 
 
 sys.path.append("./")
@@ -20,9 +21,10 @@ def st_load_data():
 @st.cache(allow_output_mutation=True)
 def st_load_model(name):
     path = os.path.join(f'output/model-brain-inverse-{name}.pt')
+    #conf, trainer, hist, inj = load_inverse("brain", path)
     conf, trainer, hist = load_inverse("brain", path)
     trainer.model.eval()
-    return conf, trainer, hist
+    return conf, trainer, hist #, inj
 
 
 def double_slider(n1, n2, k):
@@ -40,12 +42,14 @@ def eval_model(model, data, k):
     idx1, idx2 = double_slider(N_fix, N_mvg, k)
     val_fix = data['fix'][idx1].unsqueeze(0)
     val_mvt = data['moving'][idx2].unsqueeze(0)
-    res = evaluate_image(model, val_fix, val_mvt, mode="inv", show=False)
+    res = evaluate_image(model, val_mvt, val_fix, mode="inv", show=False)
     col1, col2 = st.beta_columns([5,2])
     with col1:
         st.pyplot(res['fig'])
     with col2:
         st.pyplot(res['flow'])
+    st.write("Dice score :", res['dice'])
+    
 
 
 def app():
@@ -60,8 +64,22 @@ def app():
     name = st.selectbox('config:', model_availbale)
 
     #### Load model
+    #conf, trainer, hist, inj = st_load_model(name)
     conf, trainer, hist = st_load_model(name)
+    
     st.write(conf)
+    #st.write("Injectivity indicator:", inj)
+    #st.write("Loss")
+    fig, axes = plt.subplots(nrows=2, ncols=3, figsize=(25, 10))
+    axes = axes.ravel()
+    losses=["all", "sim", "inverse", "antifold", "smooth"]
+    for i in range(5):  
+        axes[i].plot(np.arange(hist.shape[1]), hist[i], '.-')
+        axes[i].set_ylabel('loss')
+        axes[i].set_xlabel('epoch')
+        axes[i].set_title(losses[i])
+    axes[5].axis("off")
+    st.pyplot(fig)
 
     st.write("""### 🧪 Evaluation - Validation set""")
     agree1 = st.checkbox('Display ? id:1', True)

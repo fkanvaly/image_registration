@@ -81,7 +81,7 @@ inverse = {
         'fix': 5,
         'moving': 5,
         'image_loss': "mse",
-        'inverse': 0,
+        'inverse': 0.05,
         'antifold': 100000,
         'smooth': 0.5,
         'nb_features': [
@@ -89,4 +89,6 @@ inverse = {
         [32, 32, 32, 32, 32, 16]  # decoder features
         ]
     }),
+    
+    
 }

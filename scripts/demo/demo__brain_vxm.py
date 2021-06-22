@@ -1,6 +1,7 @@
 import streamlit as st
 import sys
 import numpy as np
+import matplotlib.pyplot as plt
 
 sys.path.append("./")
 
@@ -29,9 +30,10 @@ def st_load_data():
 @st.cache(allow_output_mutation=True)
 def st_load_model(name):
     path = os.path.join(f'output/model-brain-vxm-{name}.pt')
+    #conf, trainer, hist, inj = load_vxm("brain", path)
     conf, trainer, hist = load_vxm("brain", path)
     trainer.model.eval()
-    return conf, trainer, hist
+    return conf, trainer, hist #, inj
 
 
 def double_slider(n1, n2, k):
@@ -49,12 +51,13 @@ def eval_model(model, data, k):
     idx1, idx2 = double_slider(N_fix, N_mvg, k)
     val_fix = data['fix'][idx1].unsqueeze(0)
     val_mvt = data['moving'][idx2].unsqueeze(0)
-    res = evaluate_image(model, val_fix, val_mvt, mode="vxm", show=False)
+    res = evaluate_image(model, val_mvt, val_fix, mode="vxm", show=False)
     col1, col2 = st.beta_columns([5,2])
     with col1:
         st.pyplot(res['fig'])
     with col2:
         st.pyplot(res['flow'])
+    st.write("Dice score :", res['dice'])
 
 
 def app():
@@ -69,14 +72,20 @@ def app():
     name = st.selectbox('config:', model_availbale)
 
     #### Load model
-    conf, model, hist = st_load_model(name)
+    #conf, model, hist, inj = st_load_model(name)
+    conf, trainer, hist = st_load_model(name)
     st.write(conf)
+    #st.write("Injectivity indicator:", inj)
+    fig = plt.figure(figsize=(7,5))
+    plt.plot(np.arange(len(hist)), hist)
+    plt.title("loss")
+    st.pyplot(fig)
 
     st.write("""### 🧪 Evaluation 1 - Validation set""")
     agree1 = st.checkbox('Display ? id:1', True)
     if agree1:
         data1 = st_load_data()
-        eval_model(model, data1, 0)
+        eval_model(trainer, data1, 0)
 
 
 if __name__ == '__main__':

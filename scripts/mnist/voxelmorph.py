@@ -2,7 +2,7 @@ import os
 import torch
 import numpy as np
 import torch.nn as nn
-from scripts.mnist.utils import to_nametuple, Grad2D
+from scripts.mnist.utils import to_nametuple, Grad2D,  multi_props_inj, prop_inj
 from scripts.mnist.data_loader import MNISTData, BrainData
 from torchsummary import summary
 from tqdm import tqdm
@@ -55,7 +55,7 @@ def build_vxm(data_name, config, device="cpu"):
                          'losses': {'sim': L_sim, 'smooth': L_smooth}})
 
 
-def train_vxm(config, trainer, train_data, verbose=True, device="cpu"):
+def train_vxm(config, trainer, train_data, test_data, verbose=True, device="cpu"):
     loss_hist = []
     # training loops
     zero_phi = np.zeros([config.batch_size_train, *config.inshape, config.ndim])
@@ -92,14 +92,16 @@ def train_vxm(config, trainer, train_data, verbose=True, device="cpu"):
                     print('  '.join((epoch_info, step_info, loss_info)), flush=True)
 
         loss_hist.append(loss.item())
+    #inj_score = 100 * (1 - multi_props_inj(trainer, test_data, 'vxm'))
 
-    return loss_hist
+    return loss_hist #, inj_score
 
 
 def load_vxm(data_name, path, device='cpu'):
-    checkpoint = torch.load(path)
+    checkpoint = torch.load(path, map_location=device)
     conf = to_nametuple(checkpoint['config'])
     hist = checkpoint['hist']
+    #inj = checkpoint['inj']
 
     trainer = build_vxm(data_name, conf, device)
     trainer.model.load_state_dict(checkpoint['model_state_dict'])
@@ -108,7 +110,7 @@ def load_vxm(data_name, path, device='cpu'):
     trainer.model.to(device)
     print(f'model load on device: {device}')
 
-    return conf, trainer, hist
+    return conf, trainer, hist#, inj
 
 
 def train(data_name, conf, device="cpu", save=True, save_name='default', save_folder='output', verbose=True):
@@ -121,9 +123,11 @@ def train(data_name, conf, device="cpu", save=True, save_name='default', save_fo
     if data_name=="mnist":
         mnist_data = MNISTData()
         x_train, x_val = mnist_data.train_val(conf.fix, conf.moving)
+        x_test = mnist_data.test_data(conf.fix, conf.moving)
     elif data_name == "brain":
         brain_data = BrainData()
         x_train, x_val = brain_data.train_val()
+        x_test = brain_data.test_data()
     else:
         assert False, f"wrong data name: {data_name}"
 
@@ -134,12 +138,15 @@ def train(data_name, conf, device="cpu", save=True, save_name='default', save_fo
         print(summary(trainer.model, [(1, *conf.inshape), (1, *conf.inshape)]))
 
     # train model
-    hist = train_vxm(conf, trainer, x_train, verbose, device)
+    #hist, inj_score = train_vxm(conf, trainer, x_train, x_test, verbose, device)
+    hist= train_vxm(conf, trainer, x_train, x_test, verbose, device)
+    
 
     # save model
     if save:
         torch.save({'config': dict(conf._asdict()),
                     'hist': hist,
+                    #'inj': inj_score,
                     'model_state_dict': trainer.model.state_dict(),
                     'optimizer_state_dict': trainer.optimizer.state_dict(),
                     }, os.path.join(save_folder, f'model-{data_name}-vxm-{save_name}.pt'))
